@@ -4,7 +4,7 @@ lines = readlines("day04/input.txt")
 
 
 function explore(text, i, dir, depth)
-    next = ['M', 'A', 'S']
+    next = "MAS"
     if !checkbounds(Bool, text, i+dir)
         return false
     end
