@@ -28,39 +28,29 @@ function parseRules(lines)
     return rules, updates 
 end
 
-function p1(rules, updates)
-    count = 0
+function solve(rules, updates)
+    p1 = 0; p2 = 0
+    lt(x,y) = haskey(rules, x) && y ∈ rules[x]
     for update in updates
         pages = parse.(Int, split(update, ","))
-        lt(x,y) = haskey(rules, x) && y ∈ rules[x]
         
-        if issorted(pages, lt=lt)
+        if issorted(pages, lt=lt) # P1
             midPage = pages[ceil(Int, length(pages)/2)]
             # @printf "Valid page: %s\n" update
             # @printf "count: %d + %d = %d\n" count midPage count+midPage
-            count += midPage
-        end
-    end
-    return count
-end
-
-function p2(rules, updates)
-    count = 0
-    for update in updates
-        pages = parse.(Int, split(update, ","))
-        lt(x,y) = haskey(rules, x) && y ∈ rules[x]
-        
-        if !issorted(pages, lt=lt)
+            p1 += midPage
+        else # P2
             sort!(pages, lt=lt)
             midPage = pages[ceil(Int, length(pages)/2)]
             # @printf "Fixed page: %s\n" pages
             # @printf "count: %d + %d = %d\n" count midPage count+midPage
-            count += midPage
+            p2 += midPage
         end
     end
-    return count
+    return p1, p2
 end
             
-rules, updates = parseRules(lines)
-@time printstyled("P1: Mid page count = $(p1(rules, updates))\n")
-@time printstyled("P2: Mid page count = $(p2(rules, updates))\n")
+@time rules, updates = parseRules(lines)
+@time p1, p2 = solve(rules, updates)
+printstyled("P1: Mid page count = $(p1)\n")
+printstyled("P2: Mid page count = $(p2)\n")
