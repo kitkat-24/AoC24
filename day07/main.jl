@@ -1,4 +1,5 @@
 using Printf
+using Polyester
 # Tried using StaticArrays.jl to see if that would help with performance,
 # instead it caused mysterious giga allocations and tons of extra GC...
 # literally was allocating 180 MiB for P1 with ans::SVector{Int} and
@@ -43,10 +44,10 @@ function operate(perm, base, acc, num)
 end
 
 function findTrueConstraints(answers, numbers; base=2)
-    solvable = Vector{Bool}()
-    solutions = Vector{Int}()
-    for idx ∈ eachindex(answers)
-        nums = numbers[idx]
+    solvable = falses(size(answers))
+    solutions = -1 * ones(size(answers))
+    @batch for i ∈ eachindex(answers)
+        nums = numbers[i]
         nOp = length(nums) - 1
         nPerms = base ^ nOp
         # Encode operators as 0 => +, 1 => * so we can just count an integer
@@ -54,25 +55,21 @@ function findTrueConstraints(answers, numbers; base=2)
         for perm = 0:nPerms-1
             p2 = perm
             acc = nums[1]
-            i = 2
+            j = 2
             for _ = 1:nOp
-                acc = operate(p2, base, acc, nums[i])
-                if acc > answers[idx]
+                acc = operate(p2, base, acc, nums[j])
+                if acc > answers[i]
                     break
                 end
                 p2 ÷= base
-                i += 1
+                j += 1
             end
 
-            if acc == answers[idx]
-                push!(solvable, true)
-                push!(solutions, perm)
+            if acc == answers[i]
+                solvable[i] = true
+                solutions[i] = perm
                 break
             end
-        end
-        if acc != answers[idx]
-            push!(solvable, false)
-            push!(solutions, -1)
         end
     end
     return solvable, solutions
