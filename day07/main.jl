@@ -75,16 +75,42 @@ function findTrueConstraints(answers, numbers; base=2)
     return solvable, solutions
 end
 
+# Second version based on other solutions I saw on reddit and discussions with
+# ppl there
+# Main point is recursive solution makes it easy to cut off sub-trees from
+# permutation search when one operation makes all child solutions invalid.
+# Further intuition: due to the left-to-right operands, we can instead pull the
+# last numbers out and invert their operations to reduce the answer to 0 (for a
+# valid equation) or < 0 and return
+function solveTuah(ans, nums, c)
+    if length(nums) == 1 # base case
+        return ans == only(nums)
+    end
+
+    nums, v = nums[1:end-1], nums[end]
+    l = nextpow(10, v+1)
+    # Failing conditions: ans - v <= 0, ans v == 0, ans % l != v
+    return ((ans > v && solveTuah(ans - v, nums, c))
+        || (ans % v == 0 && solveTuah(ans ÷ v, nums, c))
+        || (c && ans % l == v && solveTuah(ans ÷ l, nums, c)))
+end
+
 
 data = parseInput.(input)
 answers = [d[1] for d in data]
 numbers = [d[2] for d in data]
 
-@time solvable, solns = findTrueConstraints(answers, numbers)
+# @time solvable, solns = findTrueConstraints(answers, numbers)
+@time solvable = solveTuah.(answers, numbers, false)
 @printf "P1: Sum of true test values = %d\n" sum(answers[solvable])
 
 # Only look at ones not already solvable
 idx = findall(.!solvable)
-@time fixable, fixSolns = findTrueConstraints(answers[idx], numbers[idx], base=3)
-@printf "P2: Sum of true test values = %d\n" sum(answers[solvable]) + sum(answers[idx[fixable]])
+# @time fixable, fixSolns = findTrueConstraints(answers[idx], numbers[idx], base=3)
+# @printf "P2: Sum of true test values = %d\n" sum(answers[solvable]) + sum(answers[idx[fixable]])
+# Much faster! I tried threading it, but that was actually slower. I guess it's
+# not intensive enough to benefit from the thread overhead now? idk
+@time fixable2 = solveTuah.(answers[idx], numbers[idx], true)
+@printf "P2v2: Sum of true test values = %d\n" sum(answers[solvable]) + sum(answers[idx[fixable2]])
+
 
