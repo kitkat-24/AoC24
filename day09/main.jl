@@ -1,20 +1,43 @@
 using Printf
+using DataStructures
 test = read("day09/test.txt", String)
 input = read("day09/input.txt", String)
 
+struct MemBlock
+    addr
+    len
+    id
+end
+
+struct EmptyBlock
+    addr
+    len
+end
+Base.isless(a::EmptyBlock, b::EmptyBlock) = a.addr < b.addr
+Base.isless(a::MemBlock, b::MemBlock) = a.addr < b.addr
+
 
 function buildMemMap(data)
-    memory = Vector{Int}()
+    files = Vector{MemBlock}()
+    spaces = [BinaryMinHeap{EmptyBlock}() for _ = 1:9]
+
     id = 0
+    addr = 0
     data = parse.(Int, (c for c in data))
     for (i, n) ∈ enumerate(data)
-        val = i % 2 == 1 ? id : -1
-        for j = 1:n
-            push!(memory, val)
+        if i % 2 == 1
+            # for j = 0:n-1
+                push!(files, MemBlock(addr, n, id))
+            # end
+            id += 1
+        else
+            if n > 0
+                push!(spaces[n], EmptyBlock(addr, n))
+            end
         end
-        id += i % 2 == 1 ? 1 : 0
+        addr += n
     end
-    return memory
+    return files, spaces, addr
 end
 
 function printMemMap(mem)
@@ -84,7 +107,45 @@ end
     end
 end
 
+# Heap based approach based on reading other solutions. Takes about 3ms on my
+# machine, was actually slower to remove all elements when computing the
+# checksum lmao
+function solveP2Heap(files, spaces)
+    f2 = Vector{MemBlock}()
+
+    for file ∈ reverse(files)
+        found = false
+        for n = file.len:9
+            if !isempty(spaces[n])
+                s = pop!(spaces[n])
+                n2 = s.len - file.len
+                if n2 > 0 # Re-allocate new empty space
+                    push!(spaces[n2], EmptyBlock(s.addr + file.len, n2))
+                end
+                push!(f2, MemBlock(s.addr, file.len, file.id))
+                found = true
+                break
+            end
+        end
+        if !found
+            push!(f2, file)
+        end
+    end
+    return f2, spaces
+end
+
 computeChecksum(mem) = sum(((i-1)*mem[i] for i ∈ eachindex(mem) if mem[i] >= 0))
+
+function computeChecksumHeap(files)
+    c = 0
+    sort!(files)
+    for f in files
+        for i = 0:f.len-1
+            c += f.id * (f.addr+i)
+        end
+    end
+    return c
+end
 
 @time begin # P1
 data = input;
@@ -93,12 +154,12 @@ solveP1!(mem)
 @printf "P1: checksum = %d\n" computeChecksum(mem)
 end
 
-@time begin # P2
+# @time begin # P2
 data = input;
-mem = buildMemMap(data)
+@time files, spaces, len = buildMemMap(data);
 # printMemMap(mem)
-solveP2!(mem)
+@time defraggedFiles, spaces = solveP2Heap(files, spaces);
 # printMemMap(mem)
-@printf "P2: checksum = %d\n" computeChecksum(mem)
-end
+@time @printf "P2: checksum = %d\n" computeChecksumHeap(defraggedFiles)
+# end
 
