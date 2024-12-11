@@ -8,7 +8,7 @@ function solve(grid; p1=true)
         visited = Dict{CartesianIndex{2},Bool}(n => true)
         push!(scores, dfs(n, grid, visited, p1))
     end
-    return scores, nodes
+    return scores
 end
 
 function dfs(n, grid, visited, p1)
@@ -28,8 +28,8 @@ function dfs(n, grid, visited, p1)
     return count
 end
 
-@time scores, nodes = solve(input, p1=true);
+@time scores = solve(input, p1=true);
 println("P1 sum of scores = $(sum(scores))")
 
-@time scores, nodes = solve(input, p1=false);
+@time scores = solve(input, p1=false);
 println("P2 sum of scores = $(sum(scores))")
