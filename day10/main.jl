@@ -1,45 +1,28 @@
 testGrid = parse.(UInt8, stack(readlines("day10/test.txt"); dims=1))
 input = parse.(UInt8, stack(readlines("day10/input.txt"); dims=1))
 
-module M
-    struct Node
-        pos::CartesianIndex{2}
-        val::UInt8
-        prev::Union{Nothing, CartesianIndex{2}}
-        next::Vector{CartesianIndex{2}}
-
-        function Node(pos, val, prev)
-            new(pos, val, prev, Vector{CartesianIndex{2}}())
-        end
-    end
-end
-
 function solve(grid; p1=true)
-    idx = findall(grid.==0)
-    trailheads = M.Node.(idx, grid[idx], nothing)
-    nodes = Dict{CartesianIndex{2}, M.Node}([t.pos for t in trailheads] .=> trailheads)
+    trailheads = findall(grid.==0)
     scores = []
     for n ∈ trailheads
-        visited = Dict{CartesianIndex{2},Bool}(n.pos => true)
-        push!(scores, dfs(n, nodes, grid, visited, p1))
+        visited = Dict{CartesianIndex{2},Bool}(n => true)
+        push!(scores, dfs(n, grid, visited, p1))
     end
     return scores, nodes
 end
 
-function dfs(n, nodes, grid, visited, p1)
-    if n.val == 9
+function dfs(n, grid, visited, p1)
+    if grid[n] == 9
         return 1
     end
 
     count = 0
     directions = CartesianIndex.(((1,0), (0,1), (-1,0), (0,-1)))
     for d ∈ directions
-        p = n.pos + d
-        if checkbounds(Bool, grid, p) && !get(visited, p, false) && grid[p] == n.val + 1
-            n2 = get!(nodes, p, M.Node(p, grid[p], n.pos))
-            push!(n.next, n2.pos)
-            visited[p] = p1 & true
-            count += dfs(n2, nodes, grid, visited, p1)
+        p = n + d
+        if checkbounds(Bool, grid, p) && !get(visited, p, false) && grid[p] == grid[n] + 1
+            visited[p] = p1 & true # We want to find each endpoint once in P1, but as many times as possible in P2
+            count += dfs(p, grid, visited, p1)
         end
     end
     return count
