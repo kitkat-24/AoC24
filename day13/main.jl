@@ -1,4 +1,5 @@
 using LinearAlgebra
+using Printf
 
 function readInput(fn)
     text = split(replace(read("day13/$(fn).txt", String), r"\r"=>""), "\n\n")
@@ -14,13 +15,16 @@ function readInput(fn)
     problems
 end
 
-function solveP1(fn)
+function solve(fn, p2=false)
     problems = readInput(fn)
     costs = [3, 1]
     c = 0
     for p ∈ problems
+        if p2; p[2] .+= 10000000000000; end
+        # println(p)
         x = p[1] \ p[2]
-        if all(@. abs(x - round(x)) <= 1e-10)
+        # @printf "%0.4f, %0.4f\n" x[1] x[2]
+        if all(@. abs(x - round(x)) <= 1e-4)
             c1 = costs ⋅ round.(x)
             c += c1
         end
@@ -28,6 +32,9 @@ function solveP1(fn)
     c
 end
 
-@time p1 = solveP1("input")
+@time p1 = solve("input")
 println("P1 answer: $(Int(p1))")
+
+@time p2 = solve("input", true)
+println("P2 answer: $(Int(p2))")
 
