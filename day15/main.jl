@@ -54,7 +54,32 @@ function executeP1!(map, rpos, move)
     return rpos
 end
 
-function buildBlockTreeDFS(map, root, move)
+# Move via left block
+function buildBlockTreeBFS(map, root, move)
+    tree = []
+    Q = [root]
+    while !isempty(Q)
+        v = popfirst!(Q)
+        push!(tree, v)
+        nextL = v + move; nextR = v + move + CI(0,1)
+        # println("Root = $(v), nextL = $(nextL), nextR = $(nextR)")
+        if map[nextL] == WALL || map[nextR] == WALL # Whole tree cannot move!
+            return nothing
+        end
+
+        if map[nextL] == BOXL # Just one box directly lined up
+            push!(Q, nextL)
+        else
+            if map[nextL] == BOXR
+                push!(Q, v + move + CI(0,-1))
+            end
+            if map[nextR] == BOXL
+                push!(Q, nextR)
+            end
+        end
+    end
+    # We want "deepest" nodes first
+    return reverse(tree)
 end
 
 function executeP2!(map, rpos, move)
@@ -65,7 +90,10 @@ function executeP2!(map, rpos, move)
         map[rpos] = EMPTY
         return rpos + move
     end
-    if move[1] == 0
+    if map[next] == WALL # Can't move!
+        return rpos
+    end
+    if move[1] == 0 # Horizonal moves are like P1
         while map[next] == BOXL || map[next] == BOXR
             next = next + move
         end
@@ -80,7 +108,31 @@ function executeP2!(map, rpos, move)
             return rpos + move
         end
     else # Now there is (potentially) a cascading tree of overlaping boxes and walls :(
-        # We will DFS the tree bc any blocked node blocks all parents
+        # Root is the left-half of the box the robot is directly pushing
+        if map[next] == BOXR
+            root = next + CI(0,-1)
+        else
+            root = next
+        end
+        boxes = buildBlockTreeBFS(map, root, move)
+        if !isnothing(boxes) # we can move
+            # println("Map pre tree move:")
+            # printState(map)
+            # println("Tree: $(boxes)")
+            # Boxes should be ordered so first elements are the bottom of the
+            # tree (so that we don't overwrite anything while moving)
+            for box ∈ boxes
+                map[box + move] = BOXL
+                map[box + move + CI(0,1)] = BOXR
+                map[box] = EMPTY
+                map[box + CI(0,1)] = EMPTY
+            end
+            map[next] = ROBOT
+            map[rpos] = EMPTY
+            # println("Map after tree move:")
+            # printState(map)
+            rpos = next
+        end
     end
     # Otherwise, there is no space to push stuff into, so can't move
     return rpos
@@ -92,27 +144,35 @@ function printState(map)
     end
 end
 
-function gpsScore(map, p2)
-    c = p2 ? BOXL : BOX
+function gpsScore(map, p1)
+    c = p1 ? BOX : BOXL
     idx = findall(map .== c)
     return sum(x -> 100*(x[1]-1) + (x[2]-1), idx)
 end
 
-function solve(fn; p2=false)
-    map, commands = readInput(fn)
+function solve(fn; p1=true)
     moves = Dict('v' => CI(1,0), '>' => CI(0,1), '^' => CI(-1,0), '<' => CI(0,-1))
+    map, commands = readInput(fn)
+    if !p1
+        map = widen(map)
+        printState(map)
+    end
     rpos = findfirst(map .== ROBOT)
     for comm ∈ commands
-        rpos = executeP1!(map, rpos, moves[comm])
+        if p1
+            rpos = executeP1!(map, rpos, moves[comm])
+        else
+            rpos = executeP2!(map, rpos, moves[comm])
+        end
     end
 
-    # printState(map)
+    printState(map)
 
-    return gpsScore(map, p2)
+    return gpsScore(map, p1), map
 end
 
-@time score = solve("input", p2=false)
+@time score = solve("input", p1=true)
 println("P1: score = $(score)")
 
-# @time score2 = solve("input", p2=true)
-# println("P2: score = $(score2)")
+@time score2, map2 = solve("input", p1=false)
+println("P2: score = $(score2)")
