@@ -32,6 +32,8 @@ const dirChars = Dict(CI(0,1) => '>', CI(1,0) => 'v', CI(0,-1) => '<', CI(-1,0) 
 const offsets = Dict(East => CI(0,1), South => CI(1,0), West => CI(0,-1), North => CI(-1,0))
 
 # A* algorithm implementation. h is heuristic function
+# Still not sure why this didn't work but don't wanna take the effort to debug
+# it rn since I already fell behind the daily challenges
 function jankStar(grid, start, goal, h)
     prevPath = Dict() # Value is previous node and direction to this node
     gScore = DefaultDict(Base.max_values(Int), start => 0)
@@ -79,7 +81,8 @@ function dijkstra(grid, start, goal)
     startNode = Node(start, East)
     dist = DefaultDict{Node,Int}(typemax(Int))
     dist[startNode] = 0
-    prev = Dict{Node,Node}()
+    prev = Dict{Node, Vector{Node}}()
+    prev[startNode] = []
     Q = PriorityQueue{Node, Int}()
     Q[startNode] = 0
 
@@ -94,26 +97,42 @@ function dijkstra(grid, start, goal)
                 alt = dist[u] + cost
                 if alt < dist[n]
                     dist[n] = alt
-                    prev[n] = u
+                    prev[n] = [u]
+                    Q[n] = alt
+                elseif alt == dist[n]
+                    push!(prev[n], u)
                     Q[n] = alt
                 end
             end
         end
+        # println(prev)
     end
     error("Didn't find goal!")
 end
 
-function printPath(grid, endNode, startPt, path)
+function printPath(grid, endNode, startPt, path; p1=true)
     g2 = copy(grid)
     cur = endNode
-    while true
-        cur = path[cur]
-        if cur.pos == startPt
-            break
+    if p1
+        while true
+            cur = first(path[cur])
+            if cur.pos == startPt
+                break
+            end
+            g2[cur.pos] = dirChars[offsets[cur.dir]]
         end
-        g2[cur.pos] = dirChars[offsets[cur.dir]]
+    else
+        nodeQueue = [endNode]
+        visited = DefaultDict(false)
+        while !isempty(nodeQueue)
+            cur = popfirst!(nodeQueue)
+            append!(nodeQueue, path[cur])
+            g2[cur.pos] = 'O'
+            visited[cur] = true
+        end
     end
     printState(g2)
+    return sum(g2 .== 'O')
 end
 
 
@@ -125,11 +144,11 @@ goalPt = findfirst(grid .== END)
 # h(idx) = abs(idx[1] - goalPt[1]) + abs(idx[2] - goalPt[2])
 # h(idx) = 0
 # @time score, endPt, path = jankStar(grid, startPt, goalPt, h);
-@time endNode, dist, prev = dijkstra(grid, startPt, goalPt)
+@time endNode, dist, prev = dijkstra(grid, startPt, goalPt);
 dist[endNode]
 # if endPt != goalPt
 #     fprintf("Uh oh! Bad path computed...")
 # end
-printPath(grid, endNode, startPt, prev)
+printPath(grid, endNode, startPt, prev; p1=false)
 # println("P1 score for $(fn): $(score)")
 
