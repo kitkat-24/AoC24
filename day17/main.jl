@@ -1,9 +1,6 @@
 # Day 17: Chronospacial Computer
 # We're back in computer architecture 101!
 
-fn = "test1"
-instructions = 
-
 mutable struct Reg # The computer's registers
     A::Int 
     B::Int 
@@ -38,8 +35,7 @@ function getValue(reg, op, combo)
     end
 end
 
-function execute(fn)
-    reg, instructions = readProgram(fn)
+function execute(reg, instructions, p2=false)
     ip = 0 # instruction pointer
     output = Vector{Int}()
 
@@ -69,7 +65,12 @@ function execute(fn)
             ip += 2
         elseif opcode == 5 # out 
             v = getValue(reg, val, true)
-            push!(output, v & 0x7)
+            res = v & 0x7
+            # Return early for bad result
+            if p2 && res != instructions[length(output)+1]
+                return reg, output
+            end
+            push!(output, res)
             ip += 2
         elseif opcode == 6 # bdv 
             v = getValue(reg, val, true)
@@ -87,5 +88,37 @@ function execute(fn)
 end
 
 fn = "input"
-reg, output = execute(fn)
-print(join(string.(output), ","))
+reg, instructions = readProgram(fn)
+@time reg, output = execute(reg, instructions)
+ans = join(string.(output), ",")
+ans == read("day17/p1_ans.txt", String)
+println(ans)
+
+#P2 
+# @time begin
+a2 = 0
+fn = "input"
+reg, instructions = readProgram(fn)
+reg.A = a2
+while true 
+    _, output = execute(reg, instructions)
+    
+    if output == instructions
+        break
+    end
+    a2 += 1
+    # Reset registers for next try
+    reg.A = a2
+    reg.B = 0
+    reg.C = 0
+
+    if a2 % 1e5 == 0
+        println(a2)
+    end
+
+    # if a2 == 10e6 
+    #     break
+    # end
+end
+println(a2)
+# end
