@@ -35,7 +35,7 @@ function getValue(reg, op, combo)
     end
 end
 
-function execute(reg, instructions, p2=false)
+function execute(reg, instructions, p2)
     ip = 0 # instruction pointer
     output = Vector{Int}()
 
@@ -87,38 +87,106 @@ function execute(reg, instructions, p2=false)
     return reg, output
 end
 
-fn = "input"
-reg, instructions = readProgram(fn)
-@time reg, output = execute(reg, instructions)
-ans = join(string.(output), ",")
-ans == read("day17/p1_ans.txt", String)
-println(ans)
+function p1()
+    fn = "input"
+    reg, instructions = readProgram(fn)
+    @time reg, output = execute(reg, instructions, false)
+    println(reg)
+    println(output)
+    ans = join(string.(output), ",")
+    println("test")
+    ans == read("day17/p1_ans.txt", String)
+    println(ans)
+end
+p1()
 
 #P2 
 # @time begin
-a2 = 0
-fn = "input"
-reg, instructions = readProgram(fn)
-reg.A = a2
-while true 
-    _, output = execute(reg, instructions)
-    
-    if output == instructions
-        break
-    end
-    a2 += 1
-    # Reset registers for next try
+function p2()
+    a2 = 0
+    fn = "input"
+    reg, instructions = readProgram(fn)
     reg.A = a2
-    reg.B = 0
-    reg.C = 0
+    println("aaa")
+    while true 
+        _, output = execute(reg, instructions, true)
+        
+        if output == instructions
+            break
+        end
+        a2 += 1
+        # Reset registers for next try
+        reg.A = a2
+        reg.B = 0
+        reg.C = 0
 
-    if a2 % 1e5 == 0
-        println(a2)
+        if a2 % 1e5 == 0
+            println(a2)
+        end
+
+        # if a2 == 10e6 
+        #     break
+        # end
     end
-
-    # if a2 == 10e6 
-    #     break
-    # end
+    println(a2)
 end
-println(a2)
-# end
+
+# Simplify logic:
+##################################
+# 1)
+# B = A & 0x7
+# B = B ⊻ 0x3
+# C = A ÷ 2^B 
+# A = A ÷ 8
+# B = B ⊻ 0x5
+# B = B ⊻ C
+# o = B & 0x7 # Output value
+##################################
+# 2)
+# B = (A & 0b111) ⊻ 0b011
+# C = A ÷ ((A & 0b111) ⊻ 0b011)
+# A = A >> 3
+# B = ((A & 0b111) ⊻ 0b011) ⊻ 0b101
+
+# Hardcode the input logic
+function p2hc()
+    a2 = 0
+    fn = "input"
+    reg, instructions = readProgram(fn)
+    reg.A = a2
+
+    a_input = 0
+    while true 
+        A = a_input
+        B = 0
+        C = 0
+
+        # Execute program
+        it = 1
+        while true 
+            B = A & 0x7
+            B = B ⊻ 0x3
+            C = A ÷ 2^B 
+            A = A ÷ 8
+            B = B ⊻ 0x5
+            B = B ⊻ C
+            o = B & 0x7 # Output value
+            if o != instructions[it] # Failed to print
+                break
+            elseif A == 0 # Reached end 
+                break
+            end
+            it += 1
+        end
+        if a_input % 10_000_000 == 0
+            println(a_input)
+        end
+        if it == length(instructions) # Printed whole program
+            break
+        end
+        a_input += 1
+    end
+    println(a_input)
+end
+
+p2hc()
