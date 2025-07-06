@@ -90,7 +90,7 @@ begin
 end
 
 # P1
-@time begin
+function p1()
     track = readdata("input")
     startPt = findfirst(track .== START)
     endPt = findfirst(track .== END)
@@ -105,4 +105,5 @@ end
     idx = findall((s[3] >= 100 for s in skips))
     length(idx)
 end
+@time p1()
 
