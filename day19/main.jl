@@ -34,7 +34,23 @@ end
     return possible
 end
 
+@memoize function numPossible(pattern, towels)
+    # While for P1 we just returned early if it was possible at all, for P2 we
+    # need to count all solutions. It's possible if ways > 0
+    ways = 0
+    for tok in towels
+        n = length(tok)
+        if n < length(pattern) && pattern[1:n] == tok
+            ways += numPossible(pattern[n+1:end], towels)
+        elseif n == length(pattern) && pattern == tok
+            ways += 1
+        end
+    end
+    return ways
+end
+
 towels, patterns = readdata("test")
+isPossible("bbr", towels)
 possible = [isPossible(p, towels) for p in patterns]
 for i = eachindex(possible)
     println("$(patterns[i]) is $(possible[i] ? "possible" : "impossible")")
@@ -45,3 +61,14 @@ isPossible("bwurrg", towels)
 towels, patterns = readdata("input")
 @time possible = [isPossible(p, towels) for p in patterns]
 println("$(sum(possible)) designs are possible")
+
+# P2
+towels, patterns = readdata("test")
+possible = [numPossible(p, towels) for p in patterns]
+for i = eachindex(possible)
+    println("$(patterns[i]) has $(possible[i]) possibilities")
+end
+
+towels, patterns = readdata("input")
+@time possible = [numPossible(p, towels) for p in patterns];
+println("There are $(sum(possible)) designs possible")
