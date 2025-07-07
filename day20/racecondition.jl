@@ -1,4 +1,5 @@
 using DataStructures
+using OhMyThreads: tmap
 
 
 readdata(fname) = stack(readlines("day20/$(fname).txt"); dims=1)
@@ -61,6 +62,31 @@ function searchSkips(path, track)
     return skips
 end
 
+# Manhattan Distance between grid points
+manDist(x, y) = abs(x[1]-y[1]) + abs(x[2] - y[2])
+
+function searchLongSkips(path, track, skipLen = 20)
+    dist = Dict((p => length(path)-i for (i,p) in enumerate(path)))
+    skips = []
+
+    function findPointSkips(s, path, dist)
+        tskips = Vector{Int}()
+        for p in path
+            # Only look at points that get us closer to the end
+            if dist[p] < dist[s] && manDist(s,p) <= skipLen
+                # push!(skips, (s, p, dist[s] - dist[p] - manDist(s,p)))
+                push!(tskips, (dist[s] - dist[p] - manDist(s,p)))
+            end
+        end
+        return tskips
+    end
+
+    f(x) = findPointSkips(x, path, dist)
+
+    skips = tmap(f, path[1:end-skipLen])
+    return vcat(skips...)
+end
+
 function buildPath(startPt, endPt, prev)
     path = [endPt]
     while true
@@ -89,7 +115,7 @@ begin
     skips[idx]
 end
 
-# P1
+# P1--simple 2 picosecond cheat
 function p1()
     track = readdata("input")
     startPt = findfirst(track .== START)
@@ -106,4 +132,25 @@ function p1()
     length(idx)
 end
 @time p1()
+
+# P2--free-wheeling 20 picosecond cheat
+function p2()
+    track = readdata("input")
+    startPt = findfirst(track .== START)
+    endPt = findfirst(track .== END)
+
+    _, dist, prev = dijkstra(track, startPt, endPt)
+    baseDist = dist[endPt]
+    path = buildPath(startPt, endPt, prev)
+    @assert length(path) == baseDist + 1
+    reverse!(path) # Make it start at the start point...
+
+    skips = searchLongSkips(path, track)
+    # idx = findall((s[3] >= 100 for s in skips))
+    idx = findall(skips .>= 100)
+    println("There are $(length(idx)) cheats that save at least 100 picoseconds")
+    length(idx)
+    return skips
+end
+@time skips = p2()
 
